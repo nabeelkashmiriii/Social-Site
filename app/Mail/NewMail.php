@@ -7,21 +7,23 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Contracts\Queue\ShouldQueue;
 
-class NewMail extends Mailable{
+class NewMail extends Mailable
+{
 
     use Queueable, SerializesModels;
 
     public $user;
 
-    public function __construct($user){
+    public function __construct($user)
+    {
 
         $this->user = $user;
-
     }
 
-    public function build(){
+    public function build()
+    {
 
         return $this->subject('This is Testing Mail')
-                    ->view('email.mailtest');
+            ->view('email.mailtest');
     }
 }
