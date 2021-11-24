@@ -79,7 +79,6 @@ class UserController extends Controller
 
         $db = (new DB)->SocialSite->users;
         $data = $db->findOne(['email' => $request->email]);
-
         if (Hash::check($request->password, $data->password)) {
 
             $user_data = array(
@@ -99,13 +98,12 @@ class UserController extends Controller
                     'token' => $jwt,
                 ], 200);
             } else {
-                // verify($user->email);
-                // call Method to send email Verification
+
                 UserController::sendEmail($user_data['name'], $user_data['email']);
 
                 return response()->error([
                     'message' => 'User email not verified Please Check Your email to verify',
-                    // 'user' => $user
+                    
                 ], 400);
             }
         } else {
