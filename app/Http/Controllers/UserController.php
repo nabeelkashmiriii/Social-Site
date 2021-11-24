@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Http\Requests\UserRegisterRequest;
-use MongoDB\Client as DB;
 use App\Http\Controllers\JwtController;
+use Illuminate\Support\Facades\hash;
+use MongoDB\Client as DB;
+
 
 class UserController extends Controller
 {
@@ -76,7 +78,9 @@ class UserController extends Controller
     {
 
         $db = (new DB)->SocialSite->users;
-        if ($data = $db->findOne(['email' => $request->email])) {
+        $data = $db->findOne(['email' => $request->email]);
+
+        if (Hash::check($request->password, $data->password)) {
 
             $user_data = array(
                 "id" => (string)$data->_id,
