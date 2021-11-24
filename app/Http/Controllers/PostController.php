@@ -3,51 +3,36 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Post;
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
-use App\Models\User;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
+use App\Http\Requests\PostRequest;
+use MongoDB\Client as DB;
+use App\Http\Controllers\JwtController;
 
 class PostController extends Controller
 {
-    //
-    public function post(Request $request)
+    //Create Post
+    public function post(PostRequest $request)
     {
 
         $jwt = $request->bearerToken();
-        if (User::where("jwt_token", $jwt)->exists()) {
-            $key = "example_key";
-            $decode = JWT::decode($jwt, new key($key, 'HS256'));
+        $decode = JwtController::jwt_decode($jwt);
 
-            
-            $validator = Validator::make($request->all(), [
-                'body' => 'string|max:1000',
-                'file' => 'required|mimes:jpg,png,docx,txt,mp4,pdf,ppt|max:10000',
-                'privacy' => 'required|boolean',
-            ]);
-            if ($validator->fails()) {
-                return response()->json($validator->errors()->toJson(), 400);
-            }
-            $post = new Post;
-            $post->user_id = $decode->data->id;
-            $post->body = $request->body;
-            $post->privacy = $request->privacy;
+        $validator = $request->validated();
 
-            $fileName = time() . '_' . $request->file->getClientOriginalName();
-            $filePath = $request->file('file')->storeAs('uploads', $fileName, 'public');
-            $post->file = '/storage/' . $filePath;
-            $result = $post->save();
-            if ($result) {
-                return response()->json(['message' => 'Your Content has been Posted'], 201);
-            } else {
-                return response()->json(['message' => 'Failed to Post'], 400);
-            }
+        $db = (new DB)->SocialSite->posts;
+        $fileName = time() . '_' . $validator["file"]->getClientOriginalName();
+        $filePath = $validator["file"]->storeAs('uploads', $fileName, 'public');
+        $post_save = $db->insertOne([
+            'file' => '/storage/' . $filePath,
+            'user_id' => $decode->data->id,
+            'body' => $validator["body"],
+            'privacy' => $validator["privacy"],
+            //'comments' => array(null)
+        ]);
+
+        if ($post_save) {
+            return response()->success(['message' => 'Your Content has been Posted'], 201);
         } else {
-            return response()->json(['message' => 'UnAuthorized User'], 401);
+            return response()->error(['message' => 'Failed to Post'], 400);
         }
     }
 
@@ -55,46 +40,36 @@ class PostController extends Controller
     // Delete Post
     public function deletPost(Request $request)
     {
-        $post_id = $request->id;
-        $jwt = $request->bearerToken();
-        if (User::where("jwt_token", $jwt)->exists()) {
-            $key = "example_key";
-            $decode = JWT::decode($jwt, new key($key, 'HS256'));
-            $user_id = $decode->data->id;
-            $matchthese = ['id' => $post_id, 'user_id' => $user_id];
-            $delet = Post::where($matchthese)->delete();
+        $db = (new DB)->SocialSite->posts;
 
-            if ($delet) {
+        $post_id = $request->_id;
 
-                return response()->json(['message' => 'deleted'], 201);
-            } else {
-                return response()->json(['message' => ' not deleted'], 404);
-            }
+
+
+
+        $delet = $db->deleteOne(["_id" => new \MongoDB\BSON\ObjectId($post_id)]);
+
+        if ($delet) {
+
+            return response()->success(['message' => 'deleted'], 201);
         } else {
-            return response()->json(['message' => 'UnAuthorized User'], 401);
+            return response()->error(['message' => ' not deleted'], 404);
         }
     }
 
     // update post
     public function searchPost(Request $request)
     {
+        $db = (new DB)->SocialSite->posts;
         $post_id = $request->id;
-        $jwt = $request->bearerToken();
-        if (User::where("jwt_token", $jwt)->exists()) {
-            $key = "example_key";
-            $decode = JWT::decode($jwt, new key($key, 'HS256'));
-            $user_id = $decode->data->id;
-            $matchthese = ['id' => $post_id, 'user_id' => $user_id];
+        $search = $db->findOne(["_id" => new \MongoDB\BSON\ObjectId($post_id)]);
 
 
-            if ($matchthese) {
+        if ($search) {
 
-                return response()->json([$search = Post::where($matchthese)->get(),], 201);
-            } else {
-                return response()->json(['message' => ' not found'], 404);
-            }
+            return response()->success([$search], 201);
         } else {
-            return response()->json(['message' => 'UnAuthorized User'], 401);
+            return response()->error(['message' => ' not found'], 404);
         }
     }
 }

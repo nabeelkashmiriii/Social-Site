@@ -20,14 +20,14 @@ use App\Http\Controllers\CommentController;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
-Route::post('/register', [UserController::class,'register']);
-Route::get('/verifyEmail/{email}', [UserController::class,'verify']);
-Route::post('login', [UserController::class,'login']);
-Route::get('logout', [UserController::class,'logout']);
-Route::post('createpost', [PostController::class,'post']);
-Route::delete('deletepost', [PostController::class,'deletPost']);
-Route::get('searchpost', [PostController::class,'searchPost']);
-Route::post('comment', [CommentController::class,'comment']);
-Route::delete('deletecomment', [PostController::class,'deleteComment']);
+// Route::post('/register', [UserController::class,'register']);
+// Route::get('/verifyEmail/{email}', [UserController::class,'verify']);
+// Route::post('login', [UserController::class,'login']);
+// Route::get('logout', [UserController::class,'logout']);
+// Route::post('createpost', [PostController::class,'post']);
+// Route::delete('deletepost', [PostController::class,'deletPost']);
+// Route::get('searchpost', [PostController::class,'searchPost']);
+// Route::post('comment', [CommentController::class,'comment']);
+// Route::delete('deletecomment', [PostController::class,'deleteComment']);
 
 
