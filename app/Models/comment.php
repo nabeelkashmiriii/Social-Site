@@ -16,4 +16,8 @@ class Comment extends Model
         'file',
         'body',
     ];
+    public function post()
+    {
+        return $this->belongsTo(Post::class);
+    }
 }

@@ -5,42 +5,34 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
 use App\Models\User;
-use Firebase\JWT\JWT;
-
+use App\Service\JwtAuthentication;
+use Exception;
+use App\Http\Requests\UserRequest;
+use App\Http\Resources\UserResource;
 
 class UserController extends Controller
 {
     //User Registration
-    public function register(Request $request)
+    public function register(UserRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|between:2,100',
-            'email' => 'required|string|email|max:100|unique:users',
-            'password' => 'required|string|confirmed|min:6',
-        ]);
+        try {
+            $user = User::create(array_merge(
+                $request->all(),
+                ['password' => bcrypt($request->password)]
+            ));
 
-        if ($validator->fails()) {
-            return response()->json($validator->errors()->toJson(), 400);
+            // dd($user);
+            UserController::sendEmail($request->name, $request->email);
+
+            return response()->success([
+                'message' => 'User successfully registered',
+                'user' => $user
+            ], 201);
+        } catch (Exception $e) {
+            return response()->error($e->getMessage(), 401);
         }
-
-        $user = User::create(array_merge(
-            $validator->validated(),
-            ['password' => bcrypt($request->password)]
-        ));
-
-        //dd($user);
-        UserController::sendEmail($request->name, $request->email);
-
-
-        return response()->json([
-            'message' => 'User successfully registered',
-            'user' => $user
-        ], 201);
     }
-
-
     // Send Email
     public static function sendEmail($name, $email)
     {
@@ -57,13 +49,13 @@ class UserController extends Controller
     public function verify($email)
     {
         if (User::where("email", $email)->value('verify') == 1) {
-            return response()->json(['message' => 'Your account has been verified'], 200);
+            return response()->success(['message' => 'Your account has been verified'], 200);
         } else {
             $update = User::where("email", $email)->update(["verify" => 1, "email_verified_at" => date('Y-m-d H:i:s')]);
             if ($update) {
                 return "Your Account has beem verified";
             } else {
-                return response()->json(['message' => 'Email Not verified verified'], 400);
+                return response()->error(['message' => 'Email Not verified verified'], 400);
             }
         }
     }
@@ -72,7 +64,7 @@ class UserController extends Controller
     // User Login
     public function login(Request $request)
     {
-        // dd($request);
+try{
         if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
 
             $user = Auth::user();
@@ -83,36 +75,20 @@ class UserController extends Controller
             );
             // check condition for verified email
             if (User::where("email", $user->email)->value('verify') == 1) {
+                $jwt = new JwtAuthentication;
+                $token = $jwt->jwt_encode($user_data);
 
-                $iss = "localhost";
-                $iat = time();
-                $nbf = $iat + 10;
-                $exp = $iat + 1800;
-                $aud = "User";
-                $payload_info = array(
-                    "iss" => $iss,
-                    "iat" => $iat,
-                    "nbf" => $nbf,
-                    "exp" => $exp,
-                    "aud" => $aud,
-                    "data" => $user_data
-                );
-                $key = 'example_key';
-                $jwt = jwt::encode($payload_info, $key);
-                $user->jwt_token = $jwt;
-                User::where("email", $user->email)->update(["jwt_token" => $jwt]);
+                User::where("email", $user->email)->update(["jwt_token" => $token]);
 
-                $success['message'] = "User Succesfully Loged In";
-                $success['Authentication'] = $jwt;
-
-                return response()->json([
+                return response()->success([
                     'message' => 'User successfully Loged In',
-                    'user' => $user
+                    // 'user' => $user,
+                    'token'=> $token
                 ], 200);
             } else {
-                return response()->json([
+                return response()->error([
                     'message' => 'User email not verified Please Check Your email to verify',
-                    // 'user' => $user
+
                 ], 400);
 
                 // verify($user->email);
@@ -121,11 +97,15 @@ class UserController extends Controller
                 UserController::sendEmail($user->name, $user->email);
             }
         } else {
-            return response()->json([
+            return response()->error([
                 'message' => 'User Not Found',
 
             ], 404);
         }
+    }
+    catch (Exception $e) {
+        return response()->error($e->getMessage(), 401);
+    }
     }
     // logout
 
@@ -136,11 +116,19 @@ class UserController extends Controller
 
         $delete = User::where("jwt_token", $token)->update(["jwt_token" => NULL]);
         if ($delete) {
-            return response()->json(['message' => 'User successfully Log out'], 200);
+            return response()->success(['message' => 'User successfully Log out'], 200);
         } else {
-            return response()->json(['message' => 'Token Not Found'], 404);
+            return response()->error(['message' => 'Token Not Found'], 404);
         }
     }
+    public function resource(Request $request)
+    {
+        $token = $request->bearerToken();
+        $jwt = new JwtAuthentication;
+        $decode = $jwt->jwt_decode($token);
 
-   
+        $user = User::find($decode->data->id);
+
+        return new UserResource($user);
+    }
 }
