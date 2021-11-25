@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Http\Requests\CommentRequest;
-use MongoDB\Client as DB;
+use App\Service\MongodbConn;
 
 
 class CommentController extends Controller
@@ -33,7 +33,9 @@ class CommentController extends Controller
 
             'body' => $validator['body']
         );
-        $db = (new DB)->SocialSite->posts;
+        // Get Connection
+        $connection = new MongodbConn('posts');
+        $db = $connection->getConnection();
         $result = $db->updateOne(["_id" => $post_id], ['$push' => ["comments" => $comment]]);
         if ($result) {
             return response()->success(['message' => 'Your Comment has been Posted'], 201);
@@ -47,7 +49,9 @@ class CommentController extends Controller
     {
         $comment_id = $request->id;
 
-        $db = (new DB)->SocialSite->posts;
+        // Get Connection
+        $connection = new MongodbConn('posts');
+        $db = $connection->getConnection();
         $delet = $db->deleteOne(["_id" => new \MongoDB\BSON\ObjectId($comment_id)]);
 
 

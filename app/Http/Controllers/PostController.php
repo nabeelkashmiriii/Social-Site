@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Http\Requests\PostRequest;
-use MongoDB\Client as DB;
 use App\Http\Controllers\JwtController;
+use App\Service\MongodbConn;
 
 class PostController extends Controller
 {
@@ -18,7 +18,9 @@ class PostController extends Controller
 
         $validator = $request->validated();
 
-        $db = (new DB)->SocialSite->posts;
+        // Get Connection
+        $connection = new MongodbConn('posts');
+        $db = $connection->getConnection();
         $fileName = time() . '_' . $validator["file"]->getClientOriginalName();
         $filePath = $validator["file"]->storeAs('uploads', $fileName, 'public');
         $post_save = $db->insertOne([
@@ -40,7 +42,9 @@ class PostController extends Controller
     // Delete Post
     public function deletPost(Request $request)
     {
-        $db = (new DB)->SocialSite->posts;
+        // Get Connection
+        $connection = new MongodbConn('posts');
+        $db = $connection->getConnection();
 
         $post_id = $request->_id;
 
@@ -60,7 +64,9 @@ class PostController extends Controller
     // update post
     public function searchPost(Request $request)
     {
-        $db = (new DB)->SocialSite->posts;
+        // Get Connection
+        $connection = new MongodbConn('posts');
+        $db = $connection->getConnection();
         $post_id = $request->id;
         $search = $db->findOne(["_id" => new \MongoDB\BSON\ObjectId($post_id)]);
 
